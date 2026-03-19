@@ -1,13 +1,10 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const User = require('./models/User');
 const Case = require('./models/Case');
 
 // MongoDB connection
-mongoose.connect('mongodb://localhost:27017/jeeva-raksha', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
+mongoose.connect('mongodb://localhost:27017/jeeva-raksha')
+.then(() => {
   console.log('Connected to MongoDB');
   seedData();
 }).catch((error) => {
@@ -23,22 +20,20 @@ const seedData = async () => {
     console.log('Cleared existing data');
 
     // Create admin user
-    const adminPassword = await bcrypt.hash('admin123', 10);
     const admin = new User({
       name: 'Admin User',
       email: 'admin@demo.com',
-      password: adminPassword,
+      password: 'admin123',  // Let the pre-save hook handle hashing
       role: 'admin'
     });
     await admin.save();
     console.log('Created admin user: admin@demo.com / admin123');
 
     // Create regular users
-    const userPassword = await bcrypt.hash('password123', 10);
     const user1 = new User({
       name: 'John Doe',
       email: 'user@demo.com',
-      password: userPassword,
+      password: 'password123',  // Let the pre-save hook handle hashing
       role: 'user'
     });
     await user1.save();
@@ -46,7 +41,7 @@ const seedData = async () => {
     const user2 = new User({
       name: 'Jane Smith',
       email: 'jane@demo.com',
-      password: userPassword,
+      password: 'password123',  // Let the pre-save hook handle hashing
       role: 'user'
     });
     await user2.save();

@@ -34,10 +34,8 @@ const limiter = rateLimit({
 app.use('/api/', limiter);
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/jeeva-raksha', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-}).then(() => {
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/jeeva-raksha')
+.then(() => {
   console.log('Connected to MongoDB');
 }).catch((error) => {
   console.error('MongoDB connection error:', error);

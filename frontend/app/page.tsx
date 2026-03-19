@@ -26,7 +26,7 @@ export default function LoginPage() {
   const handleLogin = async (role: 'user' | 'admin') => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -63,7 +63,7 @@ export default function LoginPage() {
   const handleRegister = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('http://localhost:5000/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
