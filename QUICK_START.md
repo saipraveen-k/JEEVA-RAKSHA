@@ -1,125 +1,79 @@
-# 🚀 Quick Start Guide - JEEVA RAKSHA
+# 🚀 JEEVA RAKSHA - Quick Start Guide
 
-## 📋 Prerequisites
-- Node.js (v18 or higher)
-- MongoDB (running locally or MongoDB Atlas)
-- Git
+## 🎯 **5-MINUTE SETUP GUIDE**
 
-## ⚡ Quick Setup (5 minutes)
+Get JEEVA RAKSHA running in minutes with this step-by-step guide!
 
-### 1. Install Dependencies
+---
+
+## 📋 **PREREQUISITES**
+
+### **Required Software**
+- ✅ **Node.js 18+** - [Download Here](https://nodejs.org/)
+- ✅ **MongoDB** - [Download Community Server](https://www.mongodb.com/try/download/community)
+- ✅ **Git** - [Download Here](https://git-scm.com/)
+
+### **Optional Tools**
+- 🌟 **MongoDB Compass** - Database GUI (Recommended)
+- � **VS Code** - Code editor with extensions
+- 🌟 **Postman** - API testing tool
+
+---
+
+## 🔧 **INSTALLATION STEPS**
+
+### **Step 1: Clone & Setup**
 ```bash
-# From root directory
+# Clone the repository
+git clone <repository-url>
+cd JEEVA-RAKSHA
+
+# Install all dependencies (both frontend & backend)
 npm run install:all
 ```
 
-### 2. Start MongoDB
+### **Step 2: MongoDB Setup**
 ```bash
-# If using local MongoDB
-mongod
+# For Windows - Start MongoDB service
+net start MongoDB
+
+# Verify MongoDB is running
+mongosh --eval "db.adminCommand('ismaster')"
+
+# Alternative: Use Docker
+docker run --name mongodb -p 27017:27017 -d mongo:latest
 ```
 
-### 3. Seed Database with Demo Data
+### **Step 3: Environment Configuration**
+```bash
+# Backend environment
+cd backend
+cp .env.example .env
+# Edit .env with your settings
+
+# Frontend environment  
+cd ../frontend
+cp .env.local.example .env.local
+# Edit .env.local with your API URL
+```
+
+### **Step 4: Database Initialization**
 ```bash
 cd backend
 node seed.js
+# Creates admin user and sample data
 ```
 
-### 4. Start Application
+### **Step 5: Start Application**
 ```bash
-# From root directory - starts both frontend & backend
+# Terminal 1 - Backend Server
+cd backend
+npm run dev
+
+# Terminal 2 - Frontend Application
+cd frontend  
 npm run dev
 ```
-
-## 🌐 Access Points
-
-- **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:5000
-- **API Health Check**: http://localhost:5000/api/health
-
-## 🔑 Demo Accounts
-
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@demo.com | admin123 |
-| User | user@demo.com | password123 |
-| User | jane@demo.com | password123 |
-
-## 🎮 Demo Flow
-
-### Step 1: User Reports Animal
-1. Go to http://localhost:3000
-2. Login as `user@demo.com` / `password123`
-3. Click "Report Animal in Need"
-4. Fill form with animal details
-5. Submit report
-
-### Step 2: Admin Manages Case
-1. Open new tab: http://localhost:3000
-2. Login as `admin@demo.com` / `admin123`
-3. See new case instantly in dashboard
-4. Click "Accept Case" → Status changes to "In Progress"
-5. Click "Mark as Resolved" → Status changes to "Resolved"
-
-### Step 3: View Map
-1. In admin dashboard, click "Show Map"
-2. See case locations as colored markers
-3. Click markers to view case details
-
-## 🔧 Troubleshooting
-
-### Port Already in Use
-```bash
-# Kill processes on ports 3000 and 5000
-npx kill-port 3000
-npx kill-port 5000
-```
-
-### MongoDB Connection Error
-```bash
-# Check if MongoDB is running
-mongosh --eval "db.adminCommand('ismaster')"
-
-# Or use MongoDB Atlas
-# Update backend/.env with your Atlas connection string
-```
-
-### Permission Issues
-```bash
-# On Windows, run as administrator if needed
-# On macOS/Linux, use sudo if needed
-sudo npm run install:all
-```
-
-## 📱 Features to Test
-
-- ✅ User registration and login
-- ✅ Role-based access control
-- ✅ Animal case reporting with GPS
-- ✅ Image upload functionality
-- ✅ Real-time case updates
-- ✅ Admin case management
-- ✅ Interactive map view
-- ✅ Status notifications
-- ✅ Responsive design
-
-## 🎯 Expected Results
-
-1. **Smooth User Experience**: Clean, modern interface
-2. **Real-time Updates**: Instant notifications when cases are submitted/updated
-3. **Role-based Access**: Users see only their cases, Admins see all cases
-4. **Mobile Responsive**: Works on all device sizes
-5. **Secure Authentication**: JWT-based login system
-
-## 🏆 Hackathon Demo Tips
-
-1. **Start with User Flow**: Show how easy it is to report an animal
-2. **Switch to Admin View**: Demonstrate real-time case management
-3. **Highlight Map Feature**: Show geographic visualization
-4. **Emphasize Real-time**: Have two browsers open to show live updates
-5. **Mobile Test**: Show responsive design on mobile device
-
-## 📞 Support
 
 If you encounter issues:
 1. Check MongoDB is running

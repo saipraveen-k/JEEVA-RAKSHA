@@ -77,6 +77,31 @@ const caseSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Auto-assign priority based on description and animal type
+caseSchema.pre('save', function(next) {
+  // Only set priority on creation
+  if (this.isNew) {
+    const description = this.description.toLowerCase();
+    const animalType = this.animalType.toLowerCase();
+    
+    // High priority keywords
+    const highPriorityKeywords = ['blood', 'critical', 'severe', 'emergency', 'dying', 'dead', 'injured badly', 'broken bone', 'hit by car'];
+    const hasHighPriorityKeyword = highPriorityKeywords.some(keyword => description.includes(keyword));
+    
+    if (hasHighPriorityKeyword) {
+      this.priority = 'high';
+    } else if (['cow', 'goat', 'horse', 'pig'].includes(animalType)) {
+      // Large animals get medium priority
+      this.priority = 'medium';
+    } else {
+      // Small animals or default cases get low priority
+      this.priority = 'low';
+    }
+  }
+  
+  next();
+});
+
 // Index for location-based queries
 caseSchema.index({ 'location': '2dsphere' });
 
@@ -85,5 +110,8 @@ caseSchema.index({ status: 1 });
 
 // Index for created by queries
 caseSchema.index({ createdBy: 1 });
+
+// Index for priority queries
+caseSchema.index({ priority: 1 });
 
 module.exports = mongoose.model('Case', caseSchema);

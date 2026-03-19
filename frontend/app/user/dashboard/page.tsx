@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
+import { useGeolocation } from '@/hooks/useGeolocation';
 import toast from 'react-hot-toast';
-import { MapPin, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { MapPin, Send, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatusBadge from '@/components/StatusBadge';
+import PriorityBadge from '@/components/PriorityBadge';
 
 interface Case {
   _id: string;
@@ -21,16 +23,18 @@ interface Case {
     address?: string;
   };
   status: 'pending' | 'in_progress' | 'resolved';
+  priority: 'low' | 'medium' | 'high';
   createdAt: string;
 }
 
 export default function UserDashboard() {
   const { user, logout, isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const { location: geoLocation, loading: locationLoading, error: locationError, accuracy, fetchLocation, clearLocation } = useGeolocation();
   const [cases, setCases] = useState<Case[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [updatingCase, setUpdatingCase] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     animalType: '',
     description: '',
@@ -45,7 +49,6 @@ export default function UserDashboard() {
 
     if (isAuthenticated) {
       fetchCases();
-      getCurrentLocation();
     }
   }, [isAuthenticated, loading, router]);
 
@@ -69,27 +72,60 @@ export default function UserDashboard() {
     }
   };
 
-  const getCurrentLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
+  const updateCaseStatus = async (caseId: string, newStatus: string) => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('No authentication token found');
+        return;
+      }
+
+      setUpdatingCase(caseId); // Set loading state
+
+      console.log('🔄 UPDATING CASE STATUS:', {
+        caseId,
+        newStatus,
+        token: token.substring(0, 20) + '...'
+      });
+
+      const response = await fetch(`http://localhost:5000/api/cases/${caseId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        (error) => {
-          toast.error('Unable to get your location. Please enable location services.');
-        }
-      );
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      console.log('📡 API RESPONSE STATUS:', response.status);
+      
+      const data = await response.json();
+      console.log('📡 API RESPONSE DATA:', data);
+      
+      if (data.success) {
+        toast.success(data.message || `Case marked as ${newStatus.replace('_', ' ')}!`);
+        fetchCases(); // Refresh the cases list
+      } else {
+        toast.error(data.message || 'Failed to update case status');
+      }
+    } catch (error) {
+      console.error('❌ NETWORK ERROR:', error);
+      toast.error('Network error. Please try again.');
+    } finally {
+      setUpdatingCase(null); // Clear loading state
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!location) {
+    if (!geoLocation) {
       toast.error('Location is required. Please enable location services.');
+      return;
+    }
+
+    if (!formData.animalType || !formData.description) {
+      toast.error('Please fill in all required fields.');
       return;
     }
 
@@ -97,10 +133,14 @@ export default function UserDashboard() {
     
     try {
       const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+      
       const formDataObj = new FormData();
       formDataObj.append('animalType', formData.animalType);
       formDataObj.append('description', formData.description);
-      formDataObj.append('location', JSON.stringify(location));
+      formDataObj.append('location', JSON.stringify(geoLocation));
       if (formData.image) {
         formDataObj.append('image', formData.image);
       }
@@ -124,6 +164,7 @@ export default function UserDashboard() {
       }
     } catch (error) {
       toast.error('Network error. Please try again.');
+      console.error('Error submitting case:', error);
     } finally {
       setSubmitting(false);
     }
@@ -214,17 +255,61 @@ export default function UserDashboard() {
                     />
                   </div>
 
-                  {location && (
-                    <div className="flex items-center text-sm text-green-600">
-                      <MapPin className="w-4 h-4 mr-1" />
-                      Location detected
-                    </div>
-                  )}
+                  {/* Location Status */}
+                  <div className="space-y-2">
+                    {locationLoading && (
+                      <div className="flex items-center text-sm text-blue-600">
+                        <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                        Fetching your location...
+                      </div>
+                    )}
+                    
+                    {locationError && (
+                      <div className="flex items-start space-x-2 text-sm text-red-600">
+                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <p>{locationError}</p>
+                          <Button
+                            type="button"
+                            variant="link"
+                            size="sm"
+                            onClick={fetchLocation}
+                            className="p-0 h-auto text-red-600 underline"
+                          >
+                            Retry
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {geoLocation && (
+                      <div className="space-y-1">
+                        <div className="flex items-center text-sm text-green-600">
+                          <MapPin className="w-4 h-4 mr-1" />
+                          Location detected
+                        </div>
+                        <div className="text-xs text-gray-500 ml-5">
+                          {geoLocation.lat.toFixed(6)}, {geoLocation.lng.toFixed(6)}
+                          {accuracy && ` (${accuracy.toFixed(0)}m accuracy)`}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={fetchLocation}
+                          className="text-xs"
+                        >
+                          <RefreshCw className="w-3 h-3 mr-1" />
+                          Refresh Location
+                        </Button>
+                      </div>
+                    )}
+                  </div>
 
                   <Button 
                     type="submit" 
                     className="w-full" 
-                    disabled={submitting || !location}
+                    disabled={submitting || !geoLocation || locationLoading}
                   >
                     {submitting ? 'Submitting...' : 'Submit Report'}
                   </Button>
@@ -260,6 +345,7 @@ export default function UserDashboard() {
                           <div className="flex items-center space-x-2">
                             <span className="font-medium capitalize">{caseItem.animalType}</span>
                             <StatusBadge status={caseItem.status} />
+                            <PriorityBadge priority={caseItem.priority} />
                           </div>
                           <span className="text-xs text-gray-500">
                             {new Date(caseItem.createdAt).toLocaleDateString()}
@@ -276,9 +362,54 @@ export default function UserDashboard() {
                           />
                         )}
                         
-                        <div className="flex items-center text-sm text-gray-500">
+                        <div className="flex items-center text-sm text-gray-500 mb-3">
                           <MapPin className="w-4 h-4 mr-1" />
                           {caseItem.location.address || `${caseItem.location.lat.toFixed(4)}, ${caseItem.location.lng.toFixed(4)}`}
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex space-x-2">
+                          {caseItem.status === 'pending' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => updateCaseStatus(caseItem._id, 'in_progress')}
+                              className="text-blue-600 hover:text-blue-700"
+                              disabled={updatingCase === caseItem._id}
+                            >
+                              {updatingCase === caseItem._id ? (
+                                <>
+                                  <LoadingSpinner size="sm" />
+                                  Updating...
+                                </>
+                              ) : (
+                                'Start Working'
+                              )}
+                            </Button>
+                          )}
+                          {caseItem.status === 'in_progress' && (
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => updateCaseStatus(caseItem._id, 'resolved')}
+                              className="text-green-600 hover:text-green-700"
+                              disabled={updatingCase === caseItem._id}
+                            >
+                              {updatingCase === caseItem._id ? (
+                                <>
+                                  <LoadingSpinner size="sm" />
+                                  Updating...
+                                </>
+                              ) : (
+                                'Mark as Resolved'
+                              )}
+                            </Button>
+                          )}
+                          {caseItem.status === 'resolved' && (
+                            <span className="text-sm text-green-600 font-medium">
+                              ✅ Case Resolved
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
