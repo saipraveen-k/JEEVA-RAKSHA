@@ -65,7 +65,7 @@ A real-time, role-based web application for reporting and managing animal rescue
 
 ### 1. Clone the Repository
 ```bash
-git clone <repository-url>
+git clone https://github.com/saipraveen-k/JEEVA-RAKSHA
 cd "JEEVA RAKSHA"
 ```
 
