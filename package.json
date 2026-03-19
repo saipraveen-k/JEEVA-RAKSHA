@@ -1,0 +1,20 @@
+{
+  "name": "jeeva-raksha",
+  "version": "1.0.0",
+  "description": "Smart Animal Protection & Rescue System",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "cd backend && npm start",
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install"
+  },
+  "keywords": ["animal", "rescue", "protection", "system"],
+  "author": "Jeeva Rakshak Team",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
