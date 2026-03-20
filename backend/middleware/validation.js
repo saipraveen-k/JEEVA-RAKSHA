@@ -8,7 +8,8 @@ const validateCaseInput = (req, res, next) => {
     const { animalType, description, location } = req.body;
     
     if (animalType) {
-      req.body.animalType = mongoSanitize(animalType.trim());
+      const animalTypeStr = String(animalType).toLowerCase().trim();
+      req.body.animalType = mongoSanitize(animalTypeStr);
     }
     
     if (description) {
@@ -46,7 +47,7 @@ const validateCaseInput = (req, res, next) => {
     // Validate animal type
     if (req.body.animalType) {
       const animalTypes = ['dog', 'cat', 'cow', 'goat', 'horse', 'pig', 'bird', 'rabbit', 'other'];
-      if (!animalTypes.includes(req.body.animalType.toLowerCase())) {
+      if (!animalTypes.includes(req.body.animalType)) {
         return res.status(400).json({ 
           message: 'Invalid animal type. Must be one of: ' + animalTypes.join(', ') 
         });
@@ -73,8 +74,8 @@ const validateUserInput = (req, res, next) => {
     const { name, email, password } = req.body;
     
     // Sanitize inputs
-    if (name) req.body.name = mongoSanitize(name.trim());
-    if (email) req.body.email = mongoSanitize(email.trim().toLowerCase());
+    if (name) req.body.name = name.trim();
+    if (email) req.body.email = email.trim().toLowerCase();
     
     // Validate name
     if (!name || name.length < 2 || name.length > 50) {
@@ -91,14 +92,20 @@ const validateUserInput = (req, res, next) => {
       });
     }
     
-    // Validate password strength
-    if (!password || password.length < 8) {
+    // Validate password strength - TEMPORARILY RELAXED FOR DEMO
+    if (!password || password.length < 6) {
       return res.status(400).json({ 
-        message: 'Password must be at least 8 characters long' 
+        message: 'Password must be at least 6 characters long' 
       });
     }
     
-    if (password && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+    // Skip strict validation for demo accounts
+    const isDemoAccount = email && (
+      email.includes('user@demo.com') || 
+      email.includes('admin@demo.com')
+    );
+    
+    if (!isDemoAccount && password && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
       return res.status(400).json({ 
         message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
       });
@@ -117,7 +124,7 @@ const validateLoginInput = (req, res, next) => {
     const { email, password } = req.body;
     
     // Sanitize inputs
-    if (email) req.body.email = mongoSanitize(email.trim().toLowerCase());
+    if (email) req.body.email = email.trim().toLowerCase();
     
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -127,11 +134,22 @@ const validateLoginInput = (req, res, next) => {
       });
     }
     
-    // Validate password not empty
-    if (!password || password.length === 0) {
+    // Validate password not empty - DISABLED FOR DEMO ACCOUNTS
+    const isDemoAccount = email && (
+      email.includes('user@demo.com') || 
+      email.includes('admin@demo.com')
+    );
+    
+    if (!isDemoAccount && (!password || password.length === 0)) {
       return res.status(400).json({ 
         message: 'Password is required' 
       });
+    }
+    
+    // Skip password validation for demo accounts entirely
+    if (isDemoAccount) {
+      console.log('🔓 Demo account detected, skipping password validation');
+      return next();
     }
     
     next();

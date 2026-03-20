@@ -6,6 +6,7 @@ const { validateCaseInput } = require('../middleware/validation');
 
 const router = express.Router();
 
+
 // Configure multer for image uploads
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -38,7 +39,7 @@ router.post('/', auth, validateCaseInput, upload.single('image'), async (req, re
     const newCase = new Case({
       animalType,
       description,
-      location: JSON.parse(location),
+      location: req.body.location, // Already parsed by validation middleware
       image: imageData,
       createdBy: req.user._id
     });
@@ -106,6 +107,35 @@ router.get('/map/locations', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/cases/stats
+// @desc    Get case statistics (admin only)
+// @access  Private (Admin)
+router.get('/stats', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin role required.' });
+    }
+
+    const total = await Case.countDocuments();
+    const pending = await Case.countDocuments({ status: 'pending' });
+    const inProgress = await Case.countDocuments({ status: 'in_progress' });
+    const resolved = await Case.countDocuments({ status: 'resolved' });
+
+    res.json({
+      success: true,
+      stats: {
+        total,
+        pending,
+        inProgress,
+        resolved
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/cases/:id
 // @desc    Get single case
 // @access  Private
@@ -126,7 +156,7 @@ router.get('/:id', auth, async (req, res) => {
     }
 
     // Check if user has access to this case
-    if (req.user.role !== 'admin' && caseItem.createdBy._id.toString() !== req.user._id.toString()) {
+    if (req.user.role !== 'admin' && caseItem.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ message: 'Access denied' });
     }
 

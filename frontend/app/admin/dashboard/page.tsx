@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
@@ -46,7 +46,7 @@ interface MapLocation {
   animalType: string;
 }
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const { user, logout, isAuthenticated, isAdmin, loading } = useAuth();
   const router = useRouter();
   const [cases, setCases] = useState<Case[]>([]);
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
                     {showMap ? 'Hide Map' : 'Show Map'}
                   </Button>
                   <span className="text-sm text-gray-600">Admin: {user?.name}</span>
-                  <Button onClick={logout} variant="outline" size="sm">
+                  <Button onClick={() => logout()} variant="outline" size="sm">
                     Logout
                   </Button>
                 </div>
@@ -434,3 +434,5 @@ export default function AdminDashboard() {
     </div>
   );
 }
+
+export default React.memo(AdminDashboard);

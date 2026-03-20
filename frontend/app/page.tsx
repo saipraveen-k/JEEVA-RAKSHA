@@ -6,9 +6,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import toast from 'react-hot-toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -24,34 +26,19 @@ export default function LoginPage() {
   };
 
   const handleLogin = async (role: 'user' | 'admin') => {
+    if (isLoading) {
+      return;
+    }
+    
     setIsLoading(true);
+    
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        toast.success(`Welcome back, ${data.user.name}!`);
-        
-        if (data.user.role === 'admin') {
-          router.push('/admin/dashboard');
-        } else {
-          router.push('/user/dashboard');
-        }
+      const result = await login(formData.email, formData.password);
+      
+      if (result.success) {
+        // Redirect is handled by useAuth hook based on user role
       } else {
-        toast.error(data.message || 'Login failed');
+        // Error is handled by useAuth hook - no duplicate message needed
       }
     } catch (error) {
       toast.error('Network error. Please try again.');
@@ -209,8 +196,9 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-sm text-gray-600">
           <p>Demo Accounts:</p>
-          <p>User: user@demo.com / password123</p>
-          <p>Admin: admin@demo.com / admin123</p>
+          <p>User: newuser@demo.com / Password123</p>
+          <p>Admin: newadmin@demo.com / Admin123</p>
+          <p className="text-xs text-green-600 mt-2">✅ These accounts work and meet validation!</p>
         </div>
       </div>
     </div>

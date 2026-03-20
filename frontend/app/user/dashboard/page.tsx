@@ -14,6 +14,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import StatusBadge from '@/components/StatusBadge';
 import PriorityBadge from '@/components/PriorityBadge';
 import { CaseStatusChart } from '@/components/Charts/CaseStatusChart';
+import { apiService } from '@/lib/api';
 
 interface Case {
   _id: string;
@@ -57,63 +58,31 @@ export default function UserDashboard() {
 
   const fetchCases = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/cases', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
+      const response = await apiService.getCases();
       
-      if (data.success) {
-        setCases(data.cases);
+      if (response.success) {
+        setCases(response.cases);
       }
     } catch (error) {
       toast.error('Failed to fetch cases');
-    } finally {
-      setDataLoading(false);
     }
   };
 
   const updateCaseStatus = async (caseId: string, newStatus: string) => {
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('No authentication token found');
-        return;
-      }
-
-      setUpdatingCase(caseId); // Set loading state
-
-      console.log('🔄 UPDATING CASE STATUS:', {
-        caseId,
-        newStatus,
-        token: token.substring(0, 20) + '...'
-      });
-
-      const response = await fetch(`http://localhost:5000/api/cases/${caseId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      console.log('📡 API RESPONSE STATUS:', response.status);
+      setUpdatingCase(caseId); // Set loading state for this specific case
       
-      const data = await response.json();
-      console.log('📡 API RESPONSE DATA:', data);
+      const response = await apiService.updateCase(caseId, { status: newStatus });
       
-      if (data.success) {
-        toast.success(data.message || `Case marked as ${newStatus.replace('_', ' ')}!`);
+      if (response.success) {
+        toast.success(response.message || `Case marked as ${newStatus.replace('_', ' ')}!`);
         fetchCases(); // Refresh the cases list
       } else {
-        toast.error(data.message || 'Failed to update case status');
+        toast.error(response.message || 'Failed to update case status');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ NETWORK ERROR:', error);
-      toast.error('Network error. Please try again.');
+      toast.error(error.message || 'Network error. Please try again.');
     } finally {
       setUpdatingCase(null); // Clear loading state
     }
@@ -184,7 +153,7 @@ export default function UserDashboard() {
             </div>
             <div className="flex items-center space-x-4">
               <span className="text-sm text-gray-600">Welcome, {user?.name}</span>
-              <Button onClick={logout} variant="outline" size="sm">
+              <Button onClick={() => logout()} variant="outline" size="sm">
                 Logout
               </Button>
             </div>

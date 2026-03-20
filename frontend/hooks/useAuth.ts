@@ -20,24 +20,31 @@ export const useAuth = () => {
     checkAuth();
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuth = async (skipValidation = false) => {
     setLoading(true);
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
 
     if (token && userData) {
       try {
-        // Validate token with server
-        const response = await apiService.getCurrentUser();
-        if (response.success && response.user) {
-          setUser(response.user);
-          localStorage.setItem('user', JSON.stringify(response.user));
+        // Skip validation if explicitly requested (e.g., right after login)
+        if (!skipValidation) {
+          // Validate token with server
+          const response = await apiService.getCurrentUser();
+          if (response.success && response.user) {
+            setUser(response.user);
+            localStorage.setItem('user', JSON.stringify(response.user));
+          } else {
+            throw new Error('Invalid token');
+          }
         } else {
-          throw new Error('Invalid token');
+          // Use stored user data without validation
+          const user = JSON.parse(userData);
+          setUser(user);
         }
       } catch (error) {
         console.error('Auth validation failed:', error);
-        logout();
+        logout(false); // Don't show logout message on validation failure
       }
     } else {
       setUser(null);
@@ -104,13 +111,15 @@ export const useAuth = () => {
     }
   };
 
-  const logout = () => {
+  const logout = (showMessage = true) => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
     setAuthChecked(false);
     router.push('/');
-    toast.success('Logged out successfully');
+    if (showMessage) {
+      toast.success('Logged out successfully');
+    }
   };
 
   const isAdmin = user?.role === 'admin';
