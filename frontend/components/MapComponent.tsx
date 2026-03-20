@@ -192,8 +192,16 @@ const MapComponent = ({ cases, loading = false, mapType, showTraffic, className 
         return;
       }
 
+      const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+      
+      if (!apiKey || apiKey === 'YOUR_API_KEY') {
+        console.warn('Google Maps API key not configured. Map features will be limited.');
+        setGoogleMapsLoaded(false);
+        return;
+      }
+
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&libraries=places&callback=initGoogleMaps`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=initGoogleMaps`;
       script.async = true;
       script.defer = true;
       

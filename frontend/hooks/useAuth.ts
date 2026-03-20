@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { apiService } from '@/lib/api';
 
 interface User {
   id: string;
@@ -12,44 +13,53 @@ interface User {
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    setLoading(true);
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
 
     if (token && userData) {
       try {
-        const parsedUser = JSON.parse(userData);
-        setUser(parsedUser);
+        // Validate token with server
+        const response = await apiService.getCurrentUser();
+        if (response.success && response.user) {
+          setUser(response.user);
+          localStorage.setItem('user', JSON.stringify(response.user));
+        } else {
+          throw new Error('Invalid token');
+        }
       } catch (error) {
-        console.error('Error parsing user data:', error);
+        console.error('Auth validation failed:', error);
         logout();
       }
+    } else {
+      setUser(null);
     }
+    
     setLoading(false);
-  }, []);
+    setAuthChecked(true);
+  };
 
   const login = async (email: string, password: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
+      setLoading(true);
+      const response = await apiService.login(email, password);
 
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
+      if (response.success) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setUser(response.user);
         
-        toast.success(`Welcome back, ${data.user.name}!`);
+        toast.success(`Welcome back, ${response.user.name}!`);
         
-        if (data.user.role === 'admin') {
+        if (response.user.role === 'admin') {
           router.push('/admin/dashboard');
         } else {
           router.push('/user/dashboard');
@@ -57,43 +67,40 @@ export const useAuth = () => {
         
         return { success: true };
       } else {
-        toast.error(data.message || 'Login failed');
-        return { success: false, message: data.message };
+        toast.error(response.message || 'Login failed');
+        return { success: false, message: response.message };
       }
-    } catch (error) {
-      toast.error('Network error. Please try again.');
-      return { success: false, message: 'Network error' };
+    } catch (error: any) {
+      toast.error(error.message || 'Network error. Please try again.');
+      return { success: false, message: error.message };
+    } finally {
+      setLoading(false);
     }
   };
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ name, email, password }),
-      });
+      setLoading(true);
+      const response = await apiService.register(name, email, password);
 
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
+      if (response.success) {
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify(response.user));
+        setUser(response.user);
         
-        toast.success(`Welcome, ${data.user.name}!`);
+        toast.success(`Welcome, ${response.user.name}!`);
         router.push('/user/dashboard');
         
         return { success: true };
       } else {
-        toast.error(data.message || 'Registration failed');
-        return { success: false, message: data.message };
+        toast.error(response.message || 'Registration failed');
+        return { success: false, message: response.message };
       }
-    } catch (error) {
-      toast.error('Network error. Please try again.');
-      return { success: false, message: 'Network error' };
+    } catch (error: any) {
+      toast.error(error.message || 'Network error. Please try again.');
+      return { success: false, message: error.message };
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -101,20 +108,23 @@ export const useAuth = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    setAuthChecked(false);
     router.push('/');
     toast.success('Logged out successfully');
   };
 
   const isAdmin = user?.role === 'admin';
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!user && authChecked;
 
   return {
     user,
     loading,
     isAuthenticated,
     isAdmin,
+    authChecked,
     login,
     register,
     logout,
+    checkAuth,
   };
 };

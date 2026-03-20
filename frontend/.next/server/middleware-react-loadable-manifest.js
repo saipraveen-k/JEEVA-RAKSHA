@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{}"
+self.__REACT_LOADABLE_MANIFEST="{\"components\\\\AdminMap.tsx -> ./MapComponent\":{\"id\":\"components\\\\AdminMap.tsx -> ./MapComponent\",\"files\":[\"static/chunks/_app-pages-browser_components_MapComponent_tsx.js\"]}}"

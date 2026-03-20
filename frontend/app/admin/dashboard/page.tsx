@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
+import { useSweetAlert } from '@/hooks/useSweetAlert';
+import { useAOS } from '@/hooks/useAOS';
 import toast from 'react-hot-toast';
 import { 
   MapPin, 
@@ -14,13 +17,22 @@ import {
   Activity,
   Eye,
   Trash2,
-  Layers
+  Layers,
+  Loader2,
+  RefreshCw,
+  Wifi,
+  WifiOff,
+  BarChart3,
+  PieChart
 } from 'lucide-react';
 import AdminMap from '@/components/AdminMap';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatsCard from '@/components/StatsCard';
 import StatusBadge from '@/components/StatusBadge';
 import PriorityBadge from '@/components/PriorityBadge';
+import { CaseStatusChart } from '@/components/Charts/CaseStatusChart';
+import { CaseDistributionChart } from '@/components/Charts/CaseDistributionChart';
+import { apiService } from '@/lib/api';
 import { Case } from '@/types/case';
 
 interface MapLocation {
@@ -49,6 +61,32 @@ export default function AdminDashboard() {
     resolved: 0
   });
 
+  // Real-time updates
+  const { isConnected, connectionError } = useRealtimeUpdates({
+    enabled: isAuthenticated && isAdmin,
+    onNewCase: (caseData: unknown) => {
+      // Add new case to the list
+      if (caseData && typeof caseData === 'object' && 'case' in caseData) {
+        const newCase = (caseData as any).case;
+        setCases(prev => [newCase, ...prev]);
+        setStats(prev => ({ ...prev, total: prev.total + 1, pending: prev.pending + 1 }));
+      }
+    },
+    onCaseUpdated: (caseData: unknown) => {
+      // Update existing case
+      if (caseData && typeof caseData === 'object' && 'case' in caseData) {
+        const updatedCase = (caseData as any).case;
+        setCases(prev => prev.map(c => c._id === updatedCase._id ? updatedCase : c));
+        fetchStats(); // Refresh stats
+      }
+    },
+    onCaseDeleted: (caseId: string) => {
+      // Remove deleted case
+      setCases(prev => prev.filter(c => c._id !== caseId));
+      setStats(prev => ({ ...prev, total: prev.total - 1 }));
+    }
+  });
+
   useEffect(() => {
     if (!loading && (!isAuthenticated || !isAdmin)) {
       router.push('/');
@@ -63,17 +101,12 @@ export default function AdminDashboard() {
 
   const fetchCases = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/cases', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
+      setDataLoading(true);
+      const response = await apiService.getCases();
       
-      if (data.success) {
-        setCases(data.cases);
-        const locations = data.cases.map((c: Case) => ({
+      if (response.success) {
+        setCases(response.cases);
+        const locations = response.cases.map((c: Case) => ({
           _id: c._id,
           location: c.location,
           status: c.status,
@@ -81,9 +114,11 @@ export default function AdminDashboard() {
           animalType: c.animalType
         }));
         setMapLocations(locations);
+      } else {
+        throw new Error(response.message || 'Failed to fetch cases');
       }
-    } catch (error) {
-      toast.error('Failed to fetch cases');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch cases');
     } finally {
       setDataLoading(false);
     }
@@ -91,46 +126,32 @@ export default function AdminDashboard() {
 
   const fetchStats = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch('http://localhost:5000/api/cases/stats', {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-      const data = await response.json();
+      const response = await apiService.getStats();
       
-      if (data.success) {
-        setStats(data.stats);
+      if (response.success) {
+        setStats(response.stats);
+      } else {
+        throw new Error(response.message || 'Failed to fetch stats');
       }
-    } catch (error) {
-      toast.error('Failed to fetch stats');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to fetch stats');
     }
   };
 
   const updateCaseStatus = async (caseId: string, status: string) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/cases/${caseId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ status }),
-      });
-
-      const data = await response.json();
+      const response = await apiService.updateCase(caseId, { status });
       
-      if (data.success) {
-        toast.success('Case status updated successfully!');
+      if (response.success) {
+        toast.success(`Case ${status === 'in_progress' ? 'started' : status === 'resolved' ? 'resolved' : 'updated'} successfully!`);
         fetchCases();
         fetchStats();
         setSelectedCase(null);
       } else {
-        toast.error(data.message || 'Failed to update case');
+        throw new Error(response.message || 'Failed to update case');
       }
-    } catch (error) {
-      toast.error('Network error. Please try again.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update case');
     }
   };
 
@@ -140,26 +161,18 @@ export default function AdminDashboard() {
     }
 
     try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`http://localhost:5000/api/cases/${caseId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      const data = await response.json();
+      const response = await apiService.deleteCase(caseId);
       
-      if (data.success) {
+      if (response.success) {
         toast.success('Case deleted successfully!');
         fetchCases();
         fetchStats();
         setSelectedCase(null);
       } else {
-        toast.error(data.message || 'Failed to delete case');
+        throw new Error(response.message || 'Failed to delete case');
       }
-    } catch (error) {
-      toast.error('Network error. Please try again.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete case');
     }
   };
 
@@ -294,8 +307,8 @@ export default function AdminDashboard() {
                             </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{caseItem.createdBy.name}</div>
-                            <div className="text-sm text-gray-500">{caseItem.createdBy.email}</div>
+                            <div className="text-sm text-gray-900">{caseItem.createdBy?.name || 'Unknown'}</div>
+                            <div className="text-sm text-gray-500">{caseItem.createdBy?.email || 'N/A'}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <StatusBadge status={caseItem.status} />
@@ -377,7 +390,7 @@ export default function AdminDashboard() {
                       <strong>Priority:</strong> <PriorityBadge priority={selectedCase.priority} />
                     </div>
                     <div>
-                      <strong>Reporter:</strong> {selectedCase.createdBy.name} ({selectedCase.createdBy.email})
+                      <strong>Reporter:</strong> {selectedCase.createdBy?.name || 'Unknown'} ({selectedCase.createdBy?.email || 'N/A'})
                     </div>
                     <div>
                       <strong>Location:</strong> {selectedCase.location.address || `${selectedCase.location.lat.toFixed(4)}, ${selectedCase.location.lng.toFixed(4)}`}

@@ -6,11 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { useSweetAlert } from '@/hooks/useSweetAlert';
+import { useAOS } from '@/hooks/useAOS';
 import toast from 'react-hot-toast';
-import { MapPin, Send, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { MapPin, Send, CheckCircle, AlertCircle, Loader2, RefreshCw, BarChart3 } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatusBadge from '@/components/StatusBadge';
 import PriorityBadge from '@/components/PriorityBadge';
+import { CaseStatusChart } from '@/components/Charts/CaseStatusChart';
 
 interface Case {
   _id: string;

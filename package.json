@@ -70,6 +70,11 @@
     "pm2": "^5.3.0"
   },
   "dependencies": {
-    "axios": "^1.13.6"
+    "@sweetalert/with-react": "^0.1.1",
+    "aos": "^2.3.4",
+    "axios": "^1.13.6",
+    "chart.js": "^4.5.1",
+    "react-chartjs-2": "^5.3.1",
+    "sweetalert2": "^11.26.23"
   }
 }
