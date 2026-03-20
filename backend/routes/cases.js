@@ -2,6 +2,7 @@ const express = require('express');
 const multer = require('multer');
 const Case = require('../models/Case');
 const { auth, adminAuth } = require('../middleware/auth');
+const { validateCaseInput } = require('../middleware/validation');
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ const upload = multer({
 // @route   POST /api/cases
 // @desc    Create a new case
 // @access  Private
-router.post('/', auth, upload.single('image'), async (req, res) => {
+router.post('/', auth, validateCaseInput, upload.single('image'), async (req, res) => {
   try {
     const { animalType, description, location } = req.body;
     
@@ -238,25 +239,6 @@ router.put('/:id', auth, async (req, res) => {
   } catch (error) {
     console.error('❌ ERROR updating case:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// @route   GET /api/cases/map/locations
-// @desc    Get all case locations for map
-// @access  Private
-router.get('/map/locations', auth, async (req, res) => {
-  try {
-    const cases = await Case.find({
-      location: { $exists: true }
-    }).select('location status priority animalType createdAt');
-
-    res.json({
-      success: true,
-      cases
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error' });
   }
 });
 

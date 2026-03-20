@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
-import { toast } from 'react-hot-toast';
+import { useState, useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 
-interface UseRealtimeUpdatesOptions {
+interface RealtimeUpdatesProps {
   enabled?: boolean;
   onNewCase?: (caseData: unknown) => void;
   onCaseUpdated?: (caseData: unknown) => void;
@@ -13,10 +13,26 @@ export const useRealtimeUpdates = ({
   onNewCase, 
   onCaseUpdated, 
   onCaseDeleted 
-}: UseRealtimeUpdatesOptions = {}) => {
+}: RealtimeUpdatesProps = {}) => {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const socketRef = useRef<any>(null);
+  
+  // Use refs to store the latest callback functions
+  const callbacksRef = useRef({
+    onNewCase,
+    onCaseUpdated,
+    onCaseDeleted
+  });
+  
+  // Update refs when callbacks change
+  useEffect(() => {
+    callbacksRef.current = {
+      onNewCase,
+      onCaseUpdated,
+      onCaseDeleted
+    };
+  }, [onNewCase, onCaseUpdated, onCaseDeleted]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -33,7 +49,8 @@ export const useRealtimeUpdates = ({
       // Dynamically import socket.io-client to avoid SSR issues
       import('socket.io-client').then(({ default: io }) => {
         try {
-          const socket = io(process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:5000', {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+          const socket = io(apiUrl.replace('/api', ''), {
             auth: {
               token: token
             },
@@ -60,23 +77,23 @@ export const useRealtimeUpdates = ({
             toast.error('Real-time updates unavailable');
           });
 
-          // Handle real-time events
+          // Handle real-time events using refs to get latest callbacks
           socket.on('new-case', (caseData: unknown) => {
             console.log('New case received:', caseData);
             toast.success('New case reported!');
-            if (onNewCase) onNewCase(caseData);
+            if (callbacksRef.current.onNewCase) callbacksRef.current.onNewCase(caseData);
           });
 
           socket.on('case-updated', (caseData: unknown) => {
             console.log('Case updated:', caseData);
             toast.success('Case status updated!');
-            if (onCaseUpdated) onCaseUpdated(caseData);
+            if (callbacksRef.current.onCaseUpdated) callbacksRef.current.onCaseUpdated(caseData);
           });
 
           socket.on('case-deleted', (caseId: string) => {
             console.log('Case deleted:', caseId);
             toast.success('Case deleted!');
-            if (onCaseDeleted) onCaseDeleted(caseId);
+            if (callbacksRef.current.onCaseDeleted) callbacksRef.current.onCaseDeleted(caseId);
           });
 
           socketRef.current = socket;
@@ -91,15 +108,18 @@ export const useRealtimeUpdates = ({
       });
     }
 
-    // Cleanup function
+    // Cleanup function - CRITICAL for preventing memory leaks
     return () => {
       if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
+        console.log('Cleaning up socket connection');
+        socketRef.current.removeAllListeners(); // Remove all event listeners
+        socketRef.current.disconnect(); // Disconnect socket
+        socketRef.current = null; // Clear reference
         setIsConnected(false);
+        setConnectionError(null);
       }
     };
-  }, [enabled, onNewCase, onCaseUpdated, onCaseDeleted]);
+  }, [enabled]);
 
   return {
     isConnected,
