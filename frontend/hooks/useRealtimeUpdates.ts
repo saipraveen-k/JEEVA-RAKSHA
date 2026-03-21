@@ -49,7 +49,7 @@ export const useRealtimeUpdates = ({
       // Dynamically import socket.io-client to avoid SSR issues
       import('socket.io-client').then(({ default: io }) => {
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+          const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
           const socket = io(apiUrl, {
             auth: {
               token: token

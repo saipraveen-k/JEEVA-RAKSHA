@@ -28,12 +28,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    console.error('🌐 API ERROR:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      message: error.response?.data?.message,
+      timestamp: new Date().toISOString()
+    });
+    
     if (error.response?.status === 401) {
-      // Check if this is a login endpoint - don't redirect on login failures
       const isLoginEndpoint = error.config?.url?.includes('/auth/login');
-      
       if (!isLoginEndpoint) {
-        // Token expired or invalid (but not during login)
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = '/';

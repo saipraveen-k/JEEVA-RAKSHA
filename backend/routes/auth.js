@@ -8,7 +8,7 @@ const router = express.Router();
 
 // Generate JWT Token
 const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET || 'your-secret-key', {
+  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
     expiresIn: '30d',
   });
 };
@@ -18,7 +18,7 @@ const generateToken = (id, role) => {
 // @access  Public
 router.post('/register', validateUserInput, async (req, res) => {
   try {
-    const { name, email, password, role = 'user' } = req.body;
+    const { name, email, password } = req.body;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -31,7 +31,7 @@ router.post('/register', validateUserInput, async (req, res) => {
       name,
       email,
       password,
-      role
+      role: 'user'
     });
 
     await user.save();
@@ -109,3 +109,4 @@ router.get('/me', auth, async (req, res) => {
 });
 
 module.exports = router;
+

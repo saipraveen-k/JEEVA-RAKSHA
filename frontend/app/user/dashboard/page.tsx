@@ -6,14 +6,11 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { useSweetAlert } from '@/hooks/useSweetAlert';
-import { useAOS } from '@/hooks/useAOS';
 import toast from 'react-hot-toast';
-import { MapPin, Send, CheckCircle, AlertCircle, Loader2, RefreshCw, BarChart3 } from 'lucide-react';
+import { MapPin, Send, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatusBadge from '@/components/StatusBadge';
 import PriorityBadge from '@/components/PriorityBadge';
-import { CaseStatusChart } from '@/components/Charts/CaseStatusChart';
 import { apiService } from '@/lib/api';
 
 interface Case {
@@ -34,7 +31,7 @@ interface Case {
 export default function UserDashboard() {
   const { user, logout, isAuthenticated, loading } = useAuth();
   const router = useRouter();
-  const { location: geoLocation, loading: locationLoading, error: locationError, accuracy, fetchLocation, clearLocation } = useGeolocation();
+  const { location: geoLocation, loading: locationLoading, error: locationError, accuracy, fetchLocation } = useGeolocation();
   const [cases, setCases] = useState<Case[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -51,13 +48,19 @@ export default function UserDashboard() {
       return;
     }
 
-    if (isAuthenticated) {
+    if (isAuthenticated && user?.role === 'admin') {
+      router.push('/admin/dashboard');
+      return;
+    }
+
+    if (isAuthenticated && user?.role === 'user') {
       fetchCases();
     }
-  }, [isAuthenticated, loading, router]);
+  }, [isAuthenticated, loading, router, user?.role]);
 
   const fetchCases = async () => {
     try {
+      setDataLoading(true);
       const response = await apiService.getCases();
       
       if (response.success) {
@@ -65,6 +68,8 @@ export default function UserDashboard() {
       }
     } catch (error) {
       toast.error('Failed to fetch cases');
+    } finally {
+      setDataLoading(false);
     }
   };
 
@@ -117,25 +122,17 @@ export default function UserDashboard() {
         formDataObj.append('image', formData.image);
       }
 
-      const response = await fetch('http://localhost:5000/api/cases', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formDataObj,
-      });
-
-      const data = await response.json();
+      const response = await apiService.createCase(formDataObj);
       
-      if (data.success) {
+      if (response.success) {
         toast.success('Case reported successfully!');
         setFormData({ animalType: '', description: '', image: null });
         fetchCases();
       } else {
-        toast.error(data.message || 'Failed to report case');
+        toast.error(response.message || 'Failed to report case');
       }
-    } catch (error) {
-      toast.error('Network error. Please try again.');
+    } catch (error: any) {
+      toast.error(error.message || 'Network error. Please try again.');
       console.error('Error submitting case:', error);
     } finally {
       setSubmitting(false);

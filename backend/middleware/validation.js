@@ -1,5 +1,5 @@
-const mongoSanitize = require('express-mongo-sanitize');
-const { body, validationResult } = require('express-validator');
+const sanitizeValue = (value) =>
+  String(value).replace(/\$/g, '').replace(/\./g, '').trim();
 
 // Sanitize and validate case inputs
 const validateCaseInput = (req, res, next) => {
@@ -9,17 +9,17 @@ const validateCaseInput = (req, res, next) => {
     
     if (animalType) {
       const animalTypeStr = String(animalType).toLowerCase().trim();
-      req.body.animalType = mongoSanitize(animalTypeStr);
+      req.body.animalType = sanitizeValue(animalTypeStr);
     }
     
     if (description) {
-      req.body.description = mongoSanitize(description.trim());
+      req.body.description = sanitizeValue(description);
     }
     
     // Validate and parse location
     if (location) {
       try {
-        const parsedLocation = JSON.parse(location);
+        const parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
         
         // Validate location structure
         if (!parsedLocation || typeof parsedLocation.lat !== 'number' || typeof parsedLocation.lng !== 'number') {
@@ -105,11 +105,14 @@ const validateUserInput = (req, res, next) => {
       email.includes('admin@demo.com')
     );
     
-    if (!isDemoAccount && password && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
-      return res.status(400).json({ 
-        message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
-      });
-    }
+
+// DISABLED STRICT PASSWORD VALIDATION FOR DEMO
+//    if (!isDemoAccount && password && !/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+//      return res.status(400).json({ 
+//        message: 'Password must contain at least one uppercase letter, one lowercase letter, and one number' 
+//      });
+//    }
+
     
     next();
   } catch (error) {
@@ -148,7 +151,6 @@ const validateLoginInput = (req, res, next) => {
     
     // Skip password validation for demo accounts entirely
     if (isDemoAccount) {
-      console.log('🔓 Demo account detected, skipping password validation');
       return next();
     }
     

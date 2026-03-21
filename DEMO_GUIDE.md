@@ -423,7 +423,7 @@ Frontend (Next.js 14) ←→ Backend (Node.js) ←→ Database (MongoDB)
 ### **🚀 Quick Demo Start**
 ```bash
 # Start complete demo environment
-npm run demo:complete
+npm run demo:setup
 
 # Verify demo readiness
 npm run demo:check

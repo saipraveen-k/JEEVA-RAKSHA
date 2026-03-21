@@ -20,36 +20,25 @@ export const useAuth = () => {
     checkAuth();
   }, []);
 
-  const checkAuth = async (skipValidation = false) => {
+  const checkAuth = async () => {
     setLoading(true);
     const token = localStorage.getItem('token');
     const userData = localStorage.getItem('user');
 
     if (token && userData) {
       try {
-        // Skip validation if explicitly requested (e.g., right after login)
-        if (!skipValidation) {
-          // Validate token with server
-          const response = await apiService.getCurrentUser();
-          if (response.success && response.user) {
-            setUser(response.user);
-            localStorage.setItem('user', JSON.stringify(response.user));
-          } else {
-            throw new Error('Invalid token');
-          }
-        } else {
-          // Use stored user data without validation
-          const user = JSON.parse(userData);
-          setUser(user);
-        }
+        const parsedUser = JSON.parse(userData);
+        await apiService.getCurrentUser();
+        setUser(parsedUser);
       } catch (error) {
-        console.error('Auth validation failed:', error);
-        logout(false); // Don't show logout message on validation failure
+        console.error('Token invalid:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
       }
     } else {
       setUser(null);
     }
-    
     setLoading(false);
     setAuthChecked(true);
   };
@@ -65,14 +54,8 @@ export const useAuth = () => {
         setUser(response.user);
         
         toast.success(`Welcome back, ${response.user.name}!`);
-        
-        if (response.user.role === 'admin') {
-          router.push('/admin/dashboard');
-        } else {
-          router.push('/user/dashboard');
-        }
-        
-        return { success: true };
+
+        return { success: true, user: response.user };
       } else {
         toast.error(response.message || 'Login failed');
         return { success: false, message: response.message };
@@ -95,10 +78,8 @@ export const useAuth = () => {
         localStorage.setItem('user', JSON.stringify(response.user));
         setUser(response.user);
         
-        toast.success(`Welcome, ${response.user.name}!`);
-        router.push('/user/dashboard');
-        
-        return { success: true };
+        // Redirect handled by login page
+        return { success: true, user: response.user };
       } else {
         toast.error(response.message || 'Registration failed');
         return { success: false, message: response.message };

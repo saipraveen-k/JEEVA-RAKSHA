@@ -4,7 +4,7 @@ const caseSchema = new mongoose.Schema({
   animalType: {
     type: String,
     required: [true, 'Animal type is required'],
-    enum: ['dog', 'cat', 'bird', 'cow', 'goat', 'other'],
+    enum: ['dog', 'cat', 'cow', 'goat', 'horse', 'pig', 'bird', 'rabbit', 'other'],
   },
   description: {
     type: String,

@@ -1,56 +1,32 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useRealtimeUpdates } from '@/hooks/useRealtimeUpdates';
-import { useSweetAlert } from '@/hooks/useSweetAlert';
-import { useAOS } from '@/hooks/useAOS';
 import toast from 'react-hot-toast';
 import { 
-  MapPin, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
+  Clock,
+  CheckCircle,
   Users, 
   Activity,
   Eye,
   Trash2,
   Layers,
-  Loader2,
-  RefreshCw,
-  Wifi,
-  WifiOff,
-  BarChart3,
-  PieChart
 } from 'lucide-react';
 import AdminMap from '@/components/AdminMap';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatsCard from '@/components/StatsCard';
 import StatusBadge from '@/components/StatusBadge';
 import PriorityBadge from '@/components/PriorityBadge';
-import { CaseStatusChart } from '@/components/Charts/CaseStatusChart';
-import { CaseDistributionChart } from '@/components/Charts/CaseDistributionChart';
 import { apiService } from '@/lib/api';
 import { Case } from '@/types/case';
-
-interface MapLocation {
-  _id: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  status: string;
-  priority: string;
-  animalType: string;
-}
 
 function AdminDashboard() {
   const { user, logout, isAuthenticated, isAdmin, loading } = useAuth();
   const router = useRouter();
   const [cases, setCases] = useState<Case[]>([]);
-  const [mapLocations, setMapLocations] = useState<MapLocation[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [showMap, setShowMap] = useState(false);
@@ -62,20 +38,18 @@ function AdminDashboard() {
   });
 
   // Real-time updates
-  const { isConnected, connectionError } = useRealtimeUpdates({
+  useRealtimeUpdates({
     enabled: isAuthenticated && isAdmin,
     onNewCase: (caseData: unknown) => {
-      // Add new case to the list
-      if (caseData && typeof caseData === 'object' && 'case' in caseData) {
-        const newCase = (caseData as any).case;
+      if (caseData && typeof caseData === 'object') {
+        const newCase = (caseData as any).case || caseData;
         setCases(prev => [newCase, ...prev]);
         setStats(prev => ({ ...prev, total: prev.total + 1, pending: prev.pending + 1 }));
       }
     },
     onCaseUpdated: (caseData: unknown) => {
-      // Update existing case
-      if (caseData && typeof caseData === 'object' && 'case' in caseData) {
-        const updatedCase = (caseData as any).case;
+      if (caseData && typeof caseData === 'object') {
+        const updatedCase = (caseData as any).case || caseData;
         setCases(prev => prev.map(c => c._id === updatedCase._id ? updatedCase : c));
         fetchStats(); // Refresh stats
       }
@@ -106,14 +80,6 @@ function AdminDashboard() {
       
       if (response.success) {
         setCases(response.cases);
-        const locations = response.cases.map((c: Case) => ({
-          _id: c._id,
-          location: c.location,
-          status: c.status,
-          priority: c.priority,
-          animalType: c.animalType
-        }));
-        setMapLocations(locations);
       } else {
         throw new Error(response.message || 'Failed to fetch cases');
       }

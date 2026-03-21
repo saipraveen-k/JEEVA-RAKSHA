@@ -10,7 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, register } = useAuth();
+
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: '',
@@ -25,52 +26,54 @@ export default function LoginPage() {
     }));
   };
 
-  const handleLogin = async (role: 'user' | 'admin') => {
-    if (isLoading) {
+
+  const handleLogin = async () => {
+    if (isLoading) return;
+
+    if (!formData.email || !formData.password) {
+      toast.error('Please enter email and password');
       return;
     }
     
     setIsLoading(true);
     
     try {
-      const result = await login(formData.email, formData.password);
-      
-      if (result.success) {
-        // Redirect is handled by useAuth hook based on user role
-      } else {
-        // Error is handled by useAuth hook - no duplicate message needed
+      const data = await login(formData.email, formData.password);
+      if (!data.success) {
+        // Error is already handled by the useAuth hook
+        return;
       }
-    } catch (error) {
-      toast.error('Network error. Please try again.');
+
+      if (data.user?.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/user/dashboard');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Login failed');
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleRegister = async () => {
+    if (isLoading) return;
+    
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        toast.success(`Welcome, ${data.user.name}!`);
-        router.push('/user/dashboard');
-      } else {
-        toast.error(data.message || 'Registration failed');
+      const data = await register(formData.name, formData.email, formData.password);
+      if (!data.success) {
+        // Error is already handled by the useAuth hook
+        return;
       }
-    } catch (error) {
-      toast.error('Network error. Please try again.');
+
+      if (data.user?.role === 'admin') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/user/dashboard');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Registration failed');
     } finally {
       setIsLoading(false);
     }
@@ -121,23 +124,13 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <Button 
-                  onClick={() => handleLogin('user')} 
-                  className="w-full" 
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Logging in...' : 'Login as User'}
-                </Button>
-                <Button 
-                  onClick={() => handleLogin('admin')} 
-                  variant="outline" 
-                  className="w-full"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Logging in...' : 'Login as Admin'}
-                </Button>
-              </div>
+              <Button 
+                onClick={handleLogin} 
+                className="w-full" 
+                disabled={isLoading}
+              >
+                {isLoading ? 'Logging in...' : 'Login'}
+              </Button>
             </TabsContent>
 
             <TabsContent value="register" className="space-y-4">
@@ -196,9 +189,9 @@ export default function LoginPage() {
 
         <div className="mt-6 text-center text-sm text-gray-600">
           <p>Demo Accounts:</p>
-          <p>User: newuser@demo.com / Password123</p>
-          <p>Admin: newadmin@demo.com / Admin123</p>
-          <p className="text-xs text-green-600 mt-2">✅ These accounts work and meet validation!</p>
+          <p>User: <strong>user@demo.com</strong> / password123</p>
+          <p>Admin: <strong>admin@demo.com</strong> / admin123</p>
+          <p className="text-xs text-green-600 mt-2">✅ <strong>EXACT</strong> seed passwords - LOGIN WORKS!</p>
         </div>
       </div>
     </div>
