@@ -27,7 +27,8 @@ export default function LoginPage() {
   };
 
 
-  const handleLogin = async () => {
+  const handleLogin = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (isLoading) return;
 
     if (!formData.email || !formData.password) {
@@ -45,9 +46,9 @@ export default function LoginPage() {
       }
 
       if (data.user?.role === 'admin') {
-        router.push('/admin/dashboard');
+        router.replace('/admin/dashboard');
       } else {
-        router.push('/user/dashboard');
+        router.replace('/user/dashboard');
       }
     } catch (error: any) {
       toast.error(error.message || 'Login failed');
@@ -56,21 +57,24 @@ export default function LoginPage() {
     }
   };
 
-  const handleRegister = async () => {
+  const handleRegister = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (isLoading) return;
-    
+
+    if (!formData.name || !formData.email || !formData.password) {
+      toast.error('Please enter name, email and password');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const data = await register(formData.name, formData.email, formData.password);
-      if (!data.success) {
-        // Error is already handled by the useAuth hook
-        return;
-      }
+      if (!data.success) return;
 
       if (data.user?.role === 'admin') {
-        router.push('/admin/dashboard');
+        router.replace('/admin/dashboard');
       } else {
-        router.push('/user/dashboard');
+        router.replace('/user/dashboard');
       }
     } catch (error: any) {
       toast.error(error.message || 'Registration failed');
@@ -80,9 +84,9 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 via-indigo-100 to-purple-100 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+        <div className="text-center mb-6">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">🐾 JEEVA RAKSHA</h1>
           <p className="text-gray-600">Smart Animal Protection & Rescue System</p>
         </div>
@@ -95,7 +99,7 @@ export default function LoginPage() {
             </TabsList>
 
             <TabsContent value="login" className="space-y-4">
-              <div className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email
@@ -106,6 +110,7 @@ export default function LoginPage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="Enter your email"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -119,22 +124,18 @@ export default function LoginPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="Enter your password"
+                    autoComplete="current-password"
                     required
                   />
                 </div>
-              </div>
-
-              <Button 
-                onClick={handleLogin} 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? 'Logging in...' : 'Login'}
-              </Button>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Logging in...' : 'Login'}
+                </Button>
+              </form>
             </TabsContent>
 
             <TabsContent value="register" className="space-y-4">
-              <div className="space-y-4">
+              <form onSubmit={handleRegister} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Name
@@ -145,6 +146,7 @@ export default function LoginPage() {
                     value={formData.name}
                     onChange={handleInputChange}
                     placeholder="Enter your name"
+                    autoComplete="name"
                     required
                   />
                 </div>
@@ -158,6 +160,7 @@ export default function LoginPage() {
                     value={formData.email}
                     onChange={handleInputChange}
                     placeholder="Enter your email"
+                    autoComplete="email"
                     required
                   />
                 </div>
@@ -171,18 +174,14 @@ export default function LoginPage() {
                     value={formData.password}
                     onChange={handleInputChange}
                     placeholder="Create a password"
+                    autoComplete="new-password"
                     required
                   />
                 </div>
-              </div>
-
-              <Button 
-                onClick={handleRegister} 
-                className="w-full" 
-                disabled={isLoading}
-              >
-                {isLoading ? 'Creating account...' : 'Create Account'}
-              </Button>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Creating account...' : 'Create Account'}
+                </Button>
+              </form>
             </TabsContent>
           </Tabs>
         </div>

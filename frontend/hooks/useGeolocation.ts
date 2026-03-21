@@ -38,20 +38,38 @@ export const useGeolocation = (): UseGeolocationReturn => {
       return;
     }
 
+    if (!window.isSecureContext) {
+      setState(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Location requires a secure context (localhost/https). Please open the app directly in your browser.',
+      }));
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-        navigator.geolocation.getCurrentPosition(
-          resolve,
-          reject,
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0,
-          }
-        );
-      });
+      const getPosition = (options: PositionOptions) =>
+        new Promise<GeolocationPosition>((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, options);
+        });
+
+      let position: GeolocationPosition;
+      try {
+        position = await getPosition({
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0,
+        });
+      } catch {
+        // Fallback mode for devices/browsers that time out with high accuracy enabled.
+        position = await getPosition({
+          enableHighAccuracy: false,
+          timeout: 15000,
+          maximumAge: 60000,
+        });
+      }
 
       const { latitude, longitude, accuracy } = position.coords;
 
@@ -73,7 +91,7 @@ export const useGeolocation = (): UseGeolocationReturn => {
       if (error instanceof GeolocationPositionError) {
         switch (error.code) {
           case error.PERMISSION_DENIED:
-            errorMessage = 'Location access denied. Please enable GPS in your browser settings.';
+            errorMessage = 'Location access denied. Allow location permission for localhost and retry.';
             break;
           case error.POSITION_UNAVAILABLE:
             errorMessage = 'Location information is unavailable.';

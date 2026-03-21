@@ -174,8 +174,8 @@ router.get('/:id', auth, async (req, res) => {
 });
 
 // @route   PUT /api/cases/:id
-// @desc    Update case status (admin can update any case, user can update their own cases)
-// @access  Private
+// @desc    Update case details/status (admin only)
+// @access  Private (Admin)
 router.put('/:id', auth, async (req, res) => {
   try {
     // Validate ObjectId format
@@ -189,26 +189,13 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(400).json({ message: 'Invalid status value' });
     }
 
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin role required.' });
+    }
+
     const caseItem = await Case.findById(req.params.id);
     if (!caseItem) {
       return res.status(404).json({ message: 'Case not found' });
-    }
-
-    // Check permissions: admin can update any case, user can only update their own cases' status
-    if (req.user.role !== 'admin' && caseItem.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Access denied. You can only update your own cases.' });
-    }
-
-    // Users can only update status, admins can update everything
-    if (req.user.role !== 'admin') {
-      // Users can only update status to 'in_progress' or 'resolved'
-      if (status && !['in_progress', 'resolved'].includes(status)) {
-        return res.status(403).json({ message: 'Users can only mark cases as in progress or resolved.' });
-      }
-      // Users cannot change priority or add notes
-      if (priority || notes) {
-        return res.status(403).json({ message: 'Only admins can change priority or add notes.' });
-      }
     }
 
     // Update fields

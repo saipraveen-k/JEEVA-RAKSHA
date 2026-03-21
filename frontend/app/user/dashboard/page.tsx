@@ -35,7 +35,6 @@ export default function UserDashboard() {
   const [cases, setCases] = useState<Case[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [updatingCase, setUpdatingCase] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     animalType: '',
     description: '',
@@ -70,26 +69,6 @@ export default function UserDashboard() {
       toast.error('Failed to fetch cases');
     } finally {
       setDataLoading(false);
-    }
-  };
-
-  const updateCaseStatus = async (caseId: string, newStatus: string) => {
-    try {
-      setUpdatingCase(caseId); // Set loading state for this specific case
-      
-      const response = await apiService.updateCase(caseId, { status: newStatus });
-      
-      if (response.success) {
-        toast.success(response.message || `Case marked as ${newStatus.replace('_', ' ')}!`);
-        fetchCases(); // Refresh the cases list
-      } else {
-        toast.error(response.message || 'Failed to update case status');
-      }
-    } catch (error: any) {
-      console.error('❌ NETWORK ERROR:', error);
-      toast.error(error.message || 'Network error. Please try again.');
-    } finally {
-      setUpdatingCase(null); // Clear loading state
     }
   };
 
@@ -336,50 +315,9 @@ export default function UserDashboard() {
                           {caseItem.location.address || `${caseItem.location.lat.toFixed(4)}, ${caseItem.location.lng.toFixed(4)}`}
                         </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex space-x-2">
-                          {caseItem.status === 'pending' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => updateCaseStatus(caseItem._id, 'in_progress')}
-                              className="text-blue-600 hover:text-blue-700"
-                              disabled={updatingCase === caseItem._id}
-                            >
-                              {updatingCase === caseItem._id ? (
-                                <>
-                                  <LoadingSpinner size="sm" />
-                                  Updating...
-                                </>
-                              ) : (
-                                'Start Working'
-                              )}
-                            </Button>
-                          )}
-                          {caseItem.status === 'in_progress' && (
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => updateCaseStatus(caseItem._id, 'resolved')}
-                              className="text-green-600 hover:text-green-700"
-                              disabled={updatingCase === caseItem._id}
-                            >
-                              {updatingCase === caseItem._id ? (
-                                <>
-                                  <LoadingSpinner size="sm" />
-                                  Updating...
-                                </>
-                              ) : (
-                                'Mark as Resolved'
-                              )}
-                            </Button>
-                          )}
-                          {caseItem.status === 'resolved' && (
-                            <span className="text-sm text-green-600 font-medium">
-                              ✅ Case Resolved
-                            </span>
-                          )}
-                        </div>
+                        <p className="text-xs text-gray-500">
+                          Status updates are managed by the admin team.
+                        </p>
                       </div>
                     ))}
                   </div>
