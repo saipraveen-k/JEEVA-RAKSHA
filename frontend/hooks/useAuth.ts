@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   role: 'user' | 'admin';
+  points?: number;
 }
 
 export const useAuth = () => {

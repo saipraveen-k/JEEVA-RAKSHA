@@ -20,6 +20,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 import StatsCard from '@/components/StatsCard';
 import StatusBadge from '@/components/StatusBadge';
 import PriorityBadge from '@/components/PriorityBadge';
+import AdminPointsManagement from '@/components/AdminPointsManagement';
 import { apiService } from '@/lib/api';
 import { Case } from '@/types/case';
 
@@ -30,6 +31,7 @@ function AdminDashboard() {
   const [dataLoading, setDataLoading] = useState(true);
   const [selectedCase, setSelectedCase] = useState<Case | null>(null);
   const [showMap, setShowMap] = useState(false);
+  const [activeTab, setActiveTab] = useState<'cases' | 'points' | 'map'>('cases');
   const [stats, setStats] = useState({
     total: 0,
     pending: 0,
@@ -80,11 +82,9 @@ function AdminDashboard() {
       
       if (response.success) {
         setCases(response.cases);
-      } else {
-        throw new Error(response.message || 'Failed to fetch cases');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to fetch cases');
+    } catch (error) {
+      toast.error('Failed to fetch cases');
     } finally {
       setDataLoading(false);
     }
@@ -96,11 +96,9 @@ function AdminDashboard() {
       
       if (response.success) {
         setStats(response.stats);
-      } else {
-        throw new Error(response.message || 'Failed to fetch stats');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to fetch stats');
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
     }
   };
 
@@ -109,10 +107,8 @@ function AdminDashboard() {
       const response = await apiService.updateCase(caseId, { status });
       
       if (response.success) {
-        toast.success(`Case ${status === 'in_progress' ? 'started' : status === 'resolved' ? 'resolved' : 'updated'} successfully!`);
+        toast.success(`Case marked as ${status.replace('_', ' ')}`);
         fetchCases();
-        fetchStats();
-        setSelectedCase(null);
       } else {
         throw new Error(response.message || 'Failed to update case');
       }
@@ -122,18 +118,12 @@ function AdminDashboard() {
   };
 
   const deleteCase = async (caseId: string) => {
-    if (!confirm('Are you sure you want to delete this case?')) {
-      return;
-    }
-
     try {
       const response = await apiService.deleteCase(caseId);
       
       if (response.success) {
-        toast.success('Case deleted successfully!');
+        toast.success('Case deleted successfully');
         fetchCases();
-        fetchStats();
-        setSelectedCase(null);
       } else {
         throw new Error(response.message || 'Failed to delete case');
       }
@@ -174,13 +164,32 @@ function AdminDashboard() {
                   <span className="ml-4 text-sm text-gray-500">Admin Dashboard</span>
                 </div>
                 <div className="flex items-center space-x-4">
-                  <Button 
-                    onClick={() => setShowMap(!showMap)} 
-                    variant={showMap ? "default" : "outline"}
-                    size="sm"
-                  >
-                    {showMap ? 'Hide Map' : 'Show Map'}
-                  </Button>
+                  <div className="flex bg-gray-100 rounded-lg p-1">
+                    <Button
+                      onClick={() => setActiveTab('cases')}
+                      variant={activeTab === 'cases' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="px-4"
+                    >
+                      Cases
+                    </Button>
+                    <Button
+                      onClick={() => setActiveTab('points')}
+                      variant={activeTab === 'points' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="px-4"
+                    >
+                      Points
+                    </Button>
+                    <Button
+                      onClick={() => setActiveTab('map')}
+                      variant={activeTab === 'map' ? 'default' : 'ghost'}
+                      size="sm"
+                      className="px-4"
+                    >
+                      Map
+                    </Button>
+                  </div>
                   <span className="text-sm text-gray-600">Admin: {user?.name}</span>
                   <Button onClick={() => logout()} variant="outline" size="sm">
                     Logout
@@ -191,206 +200,211 @@ function AdminDashboard() {
           </header>
 
           <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <StatsCard
-                title="Total Cases"
-                value={stats.total}
-                icon={<Users className="w-6 h-6" />}
-                color="blue"
-                trend={{ value: 12, isUp: true }}
-              />
-              <StatsCard
-                title="Pending"
-                value={stats.pending}
-                icon={<Clock className="w-6 h-6" />}
-                color="orange"
-              />
-              <StatsCard
-                title="In Progress"
-                value={stats.inProgress}
-                icon={<Activity className="w-6 h-6" />}
-                color="blue"
-              />
-              <StatsCard
-                title="Resolved"
-                value={stats.resolved}
-                icon={<CheckCircle className="w-6 h-6" />}
-                color="green"
-              />
-            </div>
-
-            {/* Cases Table */}
-            <div className="bg-white rounded-lg shadow-md">
-              <div className="p-6 border-b">
-                <h2 className="text-xl font-semibold">All Cases</h2>
-              </div>
-              
-              {dataLoading ? (
-                <div className="text-center py-8">
-                  <LoadingSpinner size="lg" text="Loading cases..." />
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Animal
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Reporter
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Priority
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Date
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {cases.map((caseItem, index) => (
-                        <tr key={caseItem._id} className="hover:bg-gray-50 animate-slideIn" style={{ animationDelay: `${index * 50}ms` }}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center space-x-2">
-                              <span className="capitalize font-medium">{caseItem.animalType}</span>
-                              {caseItem.image && (
-                                <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200">
-                                  <img 
-                                    src={caseItem.image} 
-                                    alt={caseItem.animalType}
-                                    className="w-full h-full object-cover"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{caseItem.createdBy?.name || 'Unknown'}</div>
-                            <div className="text-sm text-gray-500">{caseItem.createdBy?.email || 'N/A'}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <StatusBadge status={caseItem.status} />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <PriorityBadge priority={caseItem.priority} />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(caseItem.createdAt).toLocaleDateString()}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex space-x-2">
-                              <Button
-                                onClick={() => setSelectedCase(caseItem)}
-                                variant="outline"
-                                size="sm"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                onClick={() => deleteCase(caseItem._id)}
-                                variant="destructive"
-                                size="sm"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Map View */}
-            {showMap && (
-              <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <Layers className="w-5 h-5 mr-2 text-blue-500" />
-                  Case Locations Map
-                </h2>
-                <div className="h-96">
-                  <AdminMap 
-                    cases={cases} 
-                    loading={loading}
-                    className="w-full h-full"
+            {/* Cases Tab */}
+            {activeTab === 'cases' && (
+              <>
+                {/* Statistics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                  <StatsCard
+                    title="Total Cases"
+                    value={stats.total}
+                    icon={<Users className="w-6 h-6" />}
+                    color="blue"
+                    trend={{ value: 12, isUp: true }}
+                  />
+                  <StatsCard
+                    title="Pending"
+                    value={stats.pending}
+                    icon={<Clock className="w-6 h-6" />}
+                    color="orange"
+                  />
+                  <StatsCard
+                    title="In Progress"
+                    value={stats.inProgress}
+                    icon={<Activity className="w-6 h-6" />}
+                    color="blue"
+                  />
+                  <StatsCard
+                    title="Resolved"
+                    value={stats.resolved}
+                    icon={<CheckCircle className="w-6 h-6" />}
+                    color="green"
                   />
                 </div>
-              </div>
-            )}
 
-            {/* Case Details Modal */}
-            {selectedCase && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-                <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-lg font-semibold">Case Details</h3>
-                    <button
-                      onClick={() => setSelectedCase(null)}
-                      className="text-gray-400 hover:text-gray-600"
-                    >
-                      ×
-                    </button>
+                {/* Cases Table */}
+                <div className="bg-white rounded-lg shadow-md">
+                  <div className="p-6 border-b">
+                    <h2 className="text-xl font-semibold">All Cases</h2>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <strong>Animal Type:</strong> {selectedCase.animalType}
+              
+                  {dataLoading ? (
+                    <div className="text-center py-8">
+                      <LoadingSpinner size="lg" text="Loading cases..." />
                     </div>
-                    <div>
-                      <strong>Description:</strong> {selectedCase.description}
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Animal
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Reporter
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Priority
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Actions
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {cases.map((caseItem, index) => (
+                            <tr key={caseItem._id} className="hover:bg-gray-50 animate-slideIn" style={{ animationDelay: `${index * 50}ms` }}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center space-x-2">
+                                  <span className="capitalize font-medium">{caseItem.animalType}</span>
+                                  {caseItem.image && (
+                                    <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-gray-200">
+                                      <img 
+                                        src={caseItem.image} 
+                                        alt={caseItem.animalType}
+                                        className="w-full h-full object-cover"
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">{caseItem.createdBy?.name || 'Unknown'}</div>
+                                <div className="text-sm text-gray-500">{caseItem.createdBy?.email || 'N/A'}</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <StatusBadge status={caseItem.status} />
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <PriorityBadge priority={caseItem.priority} />
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {new Date(caseItem.createdAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                <div className="flex space-x-2">
+                                  <Button
+                                    onClick={() => setSelectedCase(caseItem)}
+                                    variant="outline"
+                                    size="sm"
+                                  >
+                                    <Eye className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    onClick={() => deleteCase(caseItem._id)}
+                                    variant="destructive"
+                                    size="sm"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div>
-                      <strong>Status:</strong> <StatusBadge status={selectedCase.status} />
-                    </div>
-                    <div>
-                      <strong>Priority:</strong> <PriorityBadge priority={selectedCase.priority} />
-                    </div>
-                    <div>
-                      <strong>Reporter:</strong> {selectedCase.createdBy?.name || 'Unknown'} ({selectedCase.createdBy?.email || 'N/A'})
-                    </div>
-                    <div>
-                      <strong>Location:</strong> {selectedCase.location.address || `${selectedCase.location.lat.toFixed(4)}, ${selectedCase.location.lng.toFixed(4)}`}
-                    </div>
-                    <div>
-                      <strong>Created:</strong> {new Date(selectedCase.createdAt).toLocaleString()}
-                    </div>
-                    
-                    {selectedCase.image && (
-                      <div>
-                        <strong>Image:</strong>
-                        <img 
-                          src={selectedCase.image} 
-                          alt={selectedCase.animalType}
-                          className="mt-2 max-w-full h-48 object-cover rounded"
-                        />
+                  )}
+                </div>
+
+                {/* Case Details Modal */}
+                {selectedCase && (
+                  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4">
+                      <div className="flex justify-between items-start mb-4">
+                        <h3 className="text-lg font-semibold">Case Details</h3>
+                        <button
+                          onClick={() => setSelectedCase(null)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          ×
+                        </button>
                       </div>
-                    )}
-                    
-                    <div className="flex space-x-2 mt-4">
-                      <Button
-                        onClick={() => updateCaseStatus(selectedCase._id, 'in_progress')}
-                        disabled={selectedCase.status !== 'pending'}
-                      >
-                        Start Working
-                      </Button>
-                      <Button
-                        onClick={() => updateCaseStatus(selectedCase._id, 'resolved')}
-                        disabled={selectedCase.status !== 'in_progress'}
-                      >
-                        Mark Resolved
-                      </Button>
+                      
+                      <div className="space-y-4">
+                        <div>
+                          <strong>Animal Type:</strong> {selectedCase.animalType}
+                        </div>
+                        <div>
+                          <strong>Description:</strong> {selectedCase.description}
+                        </div>
+                        <div>
+                          <strong>Status:</strong> <StatusBadge status={selectedCase.status} />
+                        </div>
+                        <div>
+                          <strong>Priority:</strong> <PriorityBadge priority={selectedCase.priority} />
+                        </div>
+                        <div>
+                          <strong>Reporter:</strong> {selectedCase.createdBy?.name || 'Unknown'} ({selectedCase.createdBy?.email || 'N/A'})
+                        </div>
+                        <div>
+                          <strong>Location:</strong> {selectedCase.location.address || `${selectedCase.location.lat.toFixed(4)}, ${selectedCase.location.lng.toFixed(4)}`}
+                        </div>
+                        <div>
+                          <strong>Created:</strong> {new Date(selectedCase.createdAt).toLocaleString()}
+                        </div>
+                        
+                        {selectedCase.image && (
+                          <div>
+                            <strong>Image:</strong>
+                            <img 
+                              src={selectedCase.image} 
+                              alt={selectedCase.animalType}
+                              className="mt-2 max-w-full h-48 object-cover rounded"
+                            />
+                          </div>
+                        )}
+                        
+                        <div className="flex space-x-2 mt-4">
+                          <Button
+                            onClick={() => updateCaseStatus(selectedCase._id, 'in_progress')}
+                            disabled={selectedCase.status !== 'pending'}
+                          >
+                            Start Working
+                          </Button>
+                          <Button
+                            onClick={() => updateCaseStatus(selectedCase._id, 'resolved')}
+                            disabled={selectedCase.status !== 'in_progress'}
+                          >
+                            Mark Resolved
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                )}
+              </>
+            )}
+            
+            {/* Points Tab */}
+            {activeTab === 'points' && (
+              <AdminPointsManagement refreshTrigger={Date.now()} />
+            )}
+            
+            {/* Map Tab */}
+            {activeTab === 'map' && (
+              <div className="bg-white rounded-lg shadow-md">
+                <div className="p-6 border-b">
+                  <h2 className="text-xl font-semibold">Cases Map</h2>
+                </div>
+                <div className="h-96">
+                  <AdminMap cases={cases} />
                 </div>
               </div>
             )}

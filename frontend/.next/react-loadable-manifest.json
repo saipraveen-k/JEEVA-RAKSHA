@@ -1,14 +1,1 @@
-{
-  "components\\AdminMap.tsx -> ./MapComponent": {
-    "id": "components\\AdminMap.tsx -> ./MapComponent",
-    "files": [
-      "static/chunks/_app-pages-browser_components_MapComponent_tsx.js"
-    ]
-  },
-  "hooks\\useRealtimeUpdates.ts -> socket.io-client": {
-    "id": "hooks\\useRealtimeUpdates.ts -> socket.io-client",
-    "files": [
-      "static/chunks/_app-pages-browser_node_modules_socket_io-client_build_esm_index_js.js"
-    ]
-  }
-}
+{}

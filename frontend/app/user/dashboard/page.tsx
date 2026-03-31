@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import toast from 'react-hot-toast';
-import { MapPin, Send, CheckCircle, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
+import { MapPin, Send, CheckCircle, AlertCircle, Loader2, RefreshCw, Trophy } from 'lucide-react';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import StatusBadge from '@/components/StatusBadge';
 import PriorityBadge from '@/components/PriorityBadge';
+import RewardsSection from '@/components/RewardsSection';
+import VisionCheck from '@/components/VisionCheck';
 import { apiService } from '@/lib/api';
 
 interface Case {
@@ -26,6 +28,7 @@ interface Case {
   status: 'pending' | 'in_progress' | 'resolved';
   priority: 'low' | 'medium' | 'high';
   createdAt: string;
+  pointsAwarded?: boolean;
 }
 
 export default function UserDashboard() {
@@ -40,6 +43,10 @@ export default function UserDashboard() {
     description: '',
     image: null as File | null,
   });
+  const [visionResult, setVisionResult] = useState<{
+    isAnimal: boolean;
+    confidence: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -128,6 +135,10 @@ export default function UserDashboard() {
               <span className="ml-4 text-sm text-gray-500">User Dashboard</span>
             </div>
             <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full">
+                <Trophy className="w-4 h-4 text-purple-600" />
+                <span className="text-sm font-medium text-purple-800">{user?.points || 0} pts</span>
+              </div>
               <span className="text-sm text-gray-600">Welcome, {user?.name}</span>
               <Button onClick={() => logout()} variant="outline" size="sm">
                 Logout
@@ -147,14 +158,15 @@ export default function UserDashboard() {
             <p className="text-gray-500">Access denied</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
             {/* Report Form */}
             <div className="lg:col-span-1">
-              <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 p-6 animate-fadeIn">
-                <h2 className="text-xl font-semibold mb-4 flex items-center">
-                  <Send className="w-5 h-5 mr-2 text-blue-500" />
-                  Report Animal in Need
-                </h2>
+              <div className="space-y-6">
+                <div className="bg-white/80 backdrop-blur-lg rounded-xl shadow-lg border border-white/20 p-6 animate-fadeIn">
+                  <h2 className="text-xl font-semibold mb-4 flex items-center">
+                    <Send className="w-5 h-5 mr-2 text-blue-500" />
+                    Report Animal in Need
+                  </h2>
                 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
@@ -201,6 +213,16 @@ export default function UserDashboard() {
                       onChange={(e) => setFormData(prev => ({ ...prev, image: e.target.files?.[0] || null }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     />
+                    
+                    {/* Vision Check Component */}
+                    {formData.image && (
+                      <div className="mt-3">
+                        <VisionCheck 
+                          imageFile={formData.image}
+                          onValidationComplete={(result) => setVisionResult(result)}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   {/* Location Status */}
@@ -263,6 +285,16 @@ export default function UserDashboard() {
                   </Button>
                 </form>
               </div>
+              
+              {/* Rewards Section */}
+              <RewardsSection 
+                userPoints={user?.points || 0}
+                onRedeemReward={(rewardId) => {
+                  console.log('Redeemed reward:', rewardId);
+                  toast.success('Reward redeemed successfully!');
+                }}
+              />
+            </div>
             </div>
 
             {/* My Reports */}

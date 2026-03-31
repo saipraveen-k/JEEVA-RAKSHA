@@ -10,6 +10,7 @@ require('dotenv').config();
 const authRoutes = require('./routes/auth');
 const caseRoutes = require('./routes/cases');
 const userRoutes = require('./routes/users');
+const visionRoutes = require('./routes/vision');
 
 const app = express();
 const server = http.createServer(app);
@@ -85,6 +86,7 @@ app.set('io', io);
 app.use('/api/auth', authRoutes);
 app.use('/api/cases', caseRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/vision-check', visionRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

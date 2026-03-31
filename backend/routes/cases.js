@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const Case = require('../models/Case');
+const User = require('../models/User');
 const { auth, adminAuth } = require('../middleware/auth');
 const { validateCaseInput } = require('../middleware/validation');
 
@@ -200,7 +201,24 @@ router.put('/:id', auth, async (req, res) => {
 
     // Update fields
     if (status) {
+      const oldStatus = caseItem.status;
       caseItem.status = status;
+      
+      // Award points if case is being resolved for the first time
+      if (status === 'resolved' && oldStatus !== 'resolved' && !caseItem.pointsAwarded) {
+        try {
+          const user = await User.findById(caseItem.createdBy);
+          if (user) {
+            user.points += 10;
+            await user.save();
+            caseItem.pointsAwarded = true;
+            console.log(`Awarded 10 points to user ${user.email} for resolving case ${caseItem._id}`);
+          }
+        } catch (pointsError) {
+          console.error('Error awarding points:', pointsError);
+          // Continue with case update even if points awarding fails
+        }
+      }
     }
     if (priority && req.user.role === 'admin') {
       caseItem.priority = priority;
