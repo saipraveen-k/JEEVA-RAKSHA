@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, Users, TrendingUp, Award, Gift } from 'lucide-react';
 import { apiService } from '@/lib/api';
+import toast from 'react-hot-toast';
 
 interface UserWithPoints {
   _id: string;
